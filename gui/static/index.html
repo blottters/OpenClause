@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenManus GUI</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+<div id="app">
+  <aside class="sidebar">
+    <button id="new-chat" class="primary">+ New Chat</button>
+    <div id="session-list"></div>
+    <div>
+      <button id="open-settings">⚙ Settings</button>
+      <button id="open-help">? Help</button>
+    </div>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <input id="session-title" value="New Chat" />
+      <div id="status" class="status-pill status-idle">Idle</div>
+      <select id="mode"><option value="manus">Manus</option><option value="flow">Flow</option><option value="mcp">MCP</option></select>
+    </div>
+    <div id="api-banner" class="banner">Configure API key in Settings before sending tasks.</div>
+    <div id="chat" class="chat"></div>
+    <div class="input-bar">
+      <textarea id="prompt" placeholder="Describe a task..."></textarea>
+      <button id="send" class="primary">Send</button>
+      <button id="stop" style="display:none;">Stop</button>
+    </div>
+  </main>
+</div>
+
+<div id="settings-modal" class="modal">
+  <div class="modal-content">
+    <h3>Settings</h3>
+    <div id="tabs" class="tabs"></div>
+    <div id="settings-content"></div>
+    <div>
+      <button id="reset-defaults">Reset to Defaults</button>
+      <button id="save-settings" class="primary">Save</button>
+      <button id="close-settings">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
