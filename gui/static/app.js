@@ -48,13 +48,57 @@ async function loadSessions(){const sessions=await api('/api/sessions');els.sess
 async function openSession(id,title){state.currentSessionId=id;els.title.value=title||'New Chat';els.chat.innerHTML='';(await api(`/api/sessions/${id}`)).forEach(m=>addMessage(m.step_type==='error'?'error':m.role==='user'?'user':m.step_type==='act'?'action':m.role==='system'?'system':'agent',m.content));loadSessions();}
 
 function collectForm(){const out={};document.querySelectorAll('[data-path]').forEach(el=>{const path=el.dataset.path.split('.');let cur=out;for(let i=0;i<path.length-1;i++){cur[path[i]]=cur[path[i]]||{};cur=cur[path[i]];}const k=path[path.length-1];cur[k]=el.type==='checkbox'?el.checked:(el.type==='number'?Number(el.value):el.value);});return out;}
-function buildSettings(section){els.settingsContent.innerHTML='';const fields=state.config[section]||{};const meta=(state.metadata[section]||{});
-  Object.entries(fields).forEach(([k,v])=>{const m=meta[k]||{description:k,recommendation:''};const row=document.createElement('div');row.className='settings-row';const label=document.createElement('label');label.textContent=`${k} (?)`;label.title=m.description;const input=document.createElement('input');input.dataset.path=`${section}.${k}`;
-    if(typeof v==='boolean'){input.type='checkbox';input.checked=v;} else if(typeof v==='number'){input.type='number';input.value=String(v);if(k==='temperature'){input.min='0';input.max='2';input.step='0.1';}if(k==='max_tokens'){input.min='1';}} else {input.type=k.includes('api_key')?'password':'text';input.value=v??'';}
-    if(k==='base_url'){input.pattern='https?://.+';}
-    const rec=document.createElement('div');rec.style.color='#6b7280';rec.style.fontSize='12px';rec.textContent=m.recommendation||m.description;
-    row.append(label,input,rec);els.settingsContent.appendChild(row);
-  });
+function deepMerge(target, source) {
+  for (const key of Object.keys(source)) {
+    if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])
+        && target[key] && typeof target[key] === 'object' && !Array.isArray(target[key])) {
+      deepMerge(target[key], source[key]);
+    } else {
+      target[key] = source[key];
+    }
+  }
+  return target;
+}
+function buildSettings(section){
+  els.settingsContent.innerHTML='';
+  const fields=state.config[section]||{};
+  const meta=(state.metadata[section]||{});
+
+  function appendField(pathParts,key,v,m){
+    const row=document.createElement('div');
+    row.className='settings-row';
+    const label=document.createElement('label');
+    label.textContent=`${key} (?)`;
+    label.title=(m&&m.description)||key;
+    const input=document.createElement('input');
+    input.dataset.path=pathParts.join('.');
+    if(typeof v==='boolean'){input.type='checkbox';input.checked=v;}
+    else if(typeof v==='number'){input.type='number';input.value=String(v);if(key==='temperature'){input.min='0';input.max='2';input.step='0.1';}if(key==='max_tokens'){input.min='1';}}
+    else {input.type=key.includes('api_key')?'password':'text';input.value=v??'';}
+    if(key==='base_url'){input.pattern='https?://.+';}
+    const rec=document.createElement('div');
+    rec.style.color='#6b7280';
+    rec.style.fontSize='12px';
+    rec.textContent=(m&&m.recommendation)||((m&&m.description)||key);
+    row.append(label,input,rec);
+    els.settingsContent.appendChild(row);
+  }
+
+  function renderObject(pathParts,obj,objMeta){
+    Object.entries(obj||{}).forEach(([key,value])=>{
+      const valueMeta=(objMeta&&objMeta[key])||{description:key,recommendation:''};
+      if(value && typeof value==='object' && !Array.isArray(value)){
+        const subHeader=document.createElement('h4');
+        subHeader.textContent=key;
+        els.settingsContent.appendChild(subHeader);
+        renderObject([...pathParts,key],value,(objMeta&&objMeta[key])||{});
+      } else {
+        appendField([...pathParts,key],key,value,valueMeta);
+      }
+    });
+  }
+
+  renderObject([section],fields,meta);
 }
 function buildTabs(){els.tabs.innerHTML='';const keys=Object.keys(state.config);let active=keys[0]||'';keys.forEach(k=>{const b=document.createElement('button');b.className='tab'+(k===active?' active':'');b.textContent=k;b.onclick=()=>{[...els.tabs.children].forEach(c=>c.classList.remove('active'));b.classList.add('active');buildSettings(k);};els.tabs.appendChild(b);});if(active)buildSettings(active);}
 
@@ -69,7 +113,7 @@ els.stop.onclick=()=>state.ws?.send(JSON.stringify({type:'stop_task'}));
 els.openSettings.onclick=()=>{buildTabs();els.settingsModal.classList.add('open');};
 els.closeSettings.onclick=()=>els.settingsModal.classList.remove('open');
 els.resetDefaults.onclick=()=>{state.config=JSON.parse(JSON.stringify(state.defaults));buildTabs();};
-els.saveSettings.onclick=async()=>{const payload=collectForm();const res=await api('/api/config',{method:'POST',body:JSON.stringify(payload)});if(res.success){state.config=payload;await loadConfig();alert('Settings saved successfully');} else alert(res.error||'Invalid configuration. Check your values.');};
+els.saveSettings.onclick=async()=>{const formValues=collectForm();const payload=JSON.parse(JSON.stringify(state.config));deepMerge(payload, formValues);const res=await api('/api/config',{method:'POST',body:JSON.stringify(payload)});if(res.success){state.config=payload;await loadConfig();alert('Settings saved successfully');} else alert(res.error||'Invalid configuration. Check your values.');};
 document.getElementById('open-help').onclick=()=>alert('Enter task, choose mode, send. Right-click a session to delete.');
 document.addEventListener('keydown',(e)=>{if(e.key==='Escape')els.settingsModal.classList.remove('open');});
 els.prompt.addEventListener('keydown',(e)=>{if(e.key==='Enter' && !e.shiftKey){e.preventDefault();sendPrompt();}});
