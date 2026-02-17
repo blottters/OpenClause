@@ -70,15 +70,16 @@ class StreamManus(Manus):
                     "step_type": "act",
                 }
             )
-            for message in self.memory.messages[-len(self.tool_calls) :]:
-                if message.role == "tool" and message.name:
-                    await self.ws_callback(
-                        {
-                            "type": "tool_result",
-                            "tool_name": message.name,
-                            "result": message.content,
-                        }
-                    )
+            if self.tool_calls:
+                for message in self.memory.messages[-len(self.tool_calls) :]:
+                    if message.role == "tool" and message.name:
+                        await self.ws_callback(
+                            {
+                                "type": "tool_result",
+                                "tool_name": message.name,
+                                "result": message.content,
+                            }
+                        )
         return result
 
 
