@@ -168,14 +168,16 @@ async def status() -> dict[str, Any]:
 
 async def _run_agent(mode: str, prompt: str, callback: CallbackType) -> str:
     if mode == "manus":
-        agent = await StreamManus.create(ws_callback=callback)
+        agent = await StreamManus.create()
+        agent.ws_callback = callback
         try:
             return await agent.run(prompt)
         finally:
             await agent.cleanup()
 
     if mode == "flow":
-        agent = await StreamManus.create(ws_callback=callback)
+        agent = await StreamManus.create()
+        agent.ws_callback = callback
         flow = FlowFactory.create_flow(flow_type=FlowType.PLANNING, agents={"manus": agent})
         try:
             return await flow.execute(prompt)
@@ -183,7 +185,8 @@ async def _run_agent(mode: str, prompt: str, callback: CallbackType) -> str:
             await agent.cleanup()
 
     if mode == "mcp":
-        agent = StreamMCP(ws_callback=callback)
+        agent = StreamMCP()
+        agent.ws_callback = callback
         try:
             await agent.initialize(
                 connection_type="stdio",
